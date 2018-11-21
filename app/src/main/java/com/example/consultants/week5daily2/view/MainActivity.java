@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.provider.ContactsContract;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,7 +14,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
 
 import com.example.consultants.week5daily2.R;
 import com.example.consultants.week5daily2.model.Contact;
@@ -28,8 +28,6 @@ public class MainActivity extends AppCompatActivity {
 
     @BindView(R.id.btnView)
     Button btnView;
-    @BindView(R.id.tvName)
-    TextView txtname;
     @BindView(R.id.rvContacts)
     RecyclerView rvContacts;
 
@@ -54,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
         List<Contact> contactList = new ArrayList();
         Contact contact;
 
+        //get contentresolver, cursor with query results
         ContentResolver contentResolver = getContentResolver();
         Cursor cursor = contentResolver.query(ContactsContract.Contacts.CONTENT_URI, null, null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
         if (cursor.getCount() > 0) {
@@ -61,12 +60,14 @@ public class MainActivity extends AppCompatActivity {
 
                 int hasPhoneNumber = Integer.parseInt(cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)));
                 if (hasPhoneNumber > 0) {
+                    //set contact name
                     String id = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID));
                     String name = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
 
                     contact = new Contact();
                     contact.setContactName(name);
 
+                    //get and set phone number
                     Cursor phoneCursor = contentResolver.query(
                             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                             null,
@@ -80,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
 
                     phoneCursor.close();
 
+                    //get and set email
                     Cursor emailCursor = contentResolver.query(
                             ContactsContract.CommonDataKinds.Email.CONTENT_URI,
                             null,
@@ -87,17 +89,22 @@ public class MainActivity extends AppCompatActivity {
                             new String[]{id}, null);
                     while (emailCursor.moveToNext()) {
                         String emailId = emailCursor.getString(emailCursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA));
+                        contact.setContactEmail(emailId);
                     }
                     contactList.add(contact);
                 }
             }
 
-            RecyclerViewAdapter contactAdapter = new RecyclerViewAdapter(contactList, getApplicationContext());
+            //initialize fragment manager, pass it to adapter, to use in item's onclick
+            FragmentManager fm = getSupportFragmentManager();
+
+            RecyclerViewAdapter contactAdapter = new RecyclerViewAdapter(contactList, getApplicationContext(), fm);
             rvContacts.setLayoutManager(new LinearLayoutManager(this));
             rvContacts.setAdapter(contactAdapter);
         }
     }
 
+    //check permissions
     private void AccessContact() {
         List<String> permissionsNeeded = new ArrayList<>();
         final List<String> permissionsList = new ArrayList<>();
